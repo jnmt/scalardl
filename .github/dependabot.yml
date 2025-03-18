@@ -19,6 +19,13 @@ updates:
       - dependency-name: "com.github.spotbugs:*"
       - dependency-name: "com.palantir.docker"
 
+  # For Dockerfile
+  - package-ecosystem: "docker"
+    directories:
+      - "/*/"
+    schedule:
+      interval: "weekly"
+
   # For GitHub Actions, update all actions on the default, support and release branches
   - package-ecosystem: "github-actions"
     groups:
