@@ -1,0 +1,49 @@
+name: Release Feature SNAPSHOT
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Extract feature name and set version
+        id: version
+        run: |
+          # Extract feature name from branch (e.g., feature/xxx -> xxx)
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          FEATURE_NAME=${BRANCH_NAME#feature/}
+          # Sanitize feature name (replace / with -)
+          FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '/' '-')
+
+          # Get base version from gradle (e.g., 4.0.0-SNAPSHOT -> 4.0.0)
+          BASE_VERSION=$(./gradlew :common:properties -q | grep "version:" | awk '{print $2}' | sed 's/-SNAPSHOT//')
+
+          # Create feature snapshot version (e.g., 4.0.0-feature-xxx-SNAPSHOT)
+          VERSION="${BASE_VERSION}-feature-${FEATURE_NAME}-SNAPSHOT"
+
+          echo "feature_name=${FEATURE_NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Publishing version: ${VERSION}"
+
+      - name: Publish to GitHub Packages
+        run: |
+          ./gradlew publish \
+            -PprojectVersion=${{ steps.version.outputs.version }} \
+            -PgprUsername="${{ github.repository_owner }}" \
+            -PgprPassword="${{ secrets.CR_PAT }}"
